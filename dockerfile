@@ -1,6 +1,6 @@
 # 多阶段构建，优化镜像大小
 # 阶段1：构建阶段
-FROM --platform=$BUILDPLATFORM golang:1.21-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # 声明构建参数
 ARG TARGETPLATFORM
@@ -8,7 +8,7 @@ ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-# 安装构建依赖
+# 根据目标架构安装对应的交叉编译工具
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 
 # 设置工作目录
@@ -26,7 +26,7 @@ ENV GOSUMDB=sum.golang.google.cn
 RUN go mod init go4wol && \
     go get github.com/mattn/go-sqlite3@v1.14.22 && \
     go mod tidy && \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -ldflags="-w -s" -o go4wol main.go
+    go build -a -ldflags="-w -s" -o go4wol main.go
 
 # 阶段2：运行阶段
 FROM alpine:latest
