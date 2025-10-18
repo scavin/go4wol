@@ -1,6 +1,12 @@
 # 多阶段构建，优化镜像大小
 # 阶段1：构建阶段
-FROM golang:1.21-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.21-alpine AS builder
+
+# 声明构建参数
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
 
 # 安装构建依赖
 RUN apk add --no-cache gcc musl-dev sqlite-dev
@@ -12,7 +18,7 @@ WORKDIR /app
 COPY main.go .
 
 # 设置Go环境变量和代理
-ENV CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+ENV CGO_ENABLED=1
 ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=sum.golang.google.cn
 
@@ -20,7 +26,7 @@ ENV GOSUMDB=sum.golang.google.cn
 RUN go mod init go4wol && \
     go get github.com/mattn/go-sqlite3@v1.14.22 && \
     go mod tidy && \
-    go build -a -o go4wol main.go
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -ldflags="-w -s" -o go4wol main.go
 
 # 阶段2：运行阶段
 FROM alpine:latest
